@@ -10,3 +10,4 @@ public class DataCentralizeApplication {
 		SpringApplication.run(DataCentralizeApplication.class, args);
 	}
 }
+

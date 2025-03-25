@@ -1,9 +1,11 @@
 package com.qp.dataCentralize.entity;
 
+import java.time.Instant;
 import java.util.List;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -19,6 +21,8 @@ public class FolderEntity {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private int entityId;
 	private String folderName;
-	@OneToMany(cascade = CascadeType.ALL)
+	private Instant time;
+	private String createdBy;
+	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
 	List<FileEntity> files;
 }

@@ -1,23 +1,29 @@
 package com.qp.dataCentralize.service;
 
-import java.io.*;
-import java.util.*;
-import java.util.concurrent.*;
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.jcraft.jsch.*;
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.Session;
+import com.jcraft.jsch.SftpException;
 import com.qp.dataCentralize.entity.FileEntity;
-import com.qp.dataCentralize.repository.FileRepository;
 
 @Service
 public class UploadLargeFile {
-
-    @Autowired
-    private FileRepository fileRepository;
 
     private static final int SFTP_PORT = 22;
     private static final String SFTP_USER = "dh_gmj3vr";
@@ -32,39 +38,38 @@ public class UploadLargeFile {
     // Thread pool for parallel uploads
     private final ExecutorService executorService = Executors.newFixedThreadPool(8);
 
-    public ResponseEntity<Map<String, Object>> handleFileUpload(MultipartFile[] files, int folderId) {
-        Map<String, Object> response = new HashMap<>();
+    public List<FileEntity> handleFileUpload(MultipartFile[] files) {
         List<CompletableFuture<Void>> futures = new ArrayList<>();
-
+        List<FileEntity> filelist=new ArrayList<FileEntity>();
         for (MultipartFile file : files) {
-            futures.add(CompletableFuture.runAsync(() -> uploadFile(file), executorService));
+            futures.add(CompletableFuture.runAsync(() -> {
+            	try (InputStream inputStream = file.getInputStream()) {
+                    String uniqueName = generateUniqueFileName(file.getOriginalFilename());
+                    String fileUrl = uploadFileViaSFTP(inputStream, uniqueName);
+
+                    if (fileUrl != null) {
+
+						FileEntity fileEntity = new FileEntity();
+						fileEntity.setFileLink(fileUrl);
+						fileEntity.setFileName(file.getOriginalFilename());
+						fileEntity.setType(file.getContentType());
+						fileEntity.setFileSize(file.getSize() + "");
+						fileEntity.setTime(Instant.now());
+						filelist.add(fileEntity);
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to upload file: " + e.getMessage(), e);
+                }
+            }, executorService));
         }
 
         try {
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
-            response.put("status", "success");
-            response.put("message", "Files uploaded successfully");
-            return ResponseEntity.ok(response);
+            
         } catch (Exception e) {
-            e.printStackTrace();
-            response.put("status", "error");
-            response.put("message", "Upload failed: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        	new RuntimeException(e.getMessage());
         }
-    }
-
-    private void uploadFile(MultipartFile file) {
-        try (InputStream inputStream = file.getInputStream()) {
-            String uniqueName = generateUniqueFileName(file.getOriginalFilename());
-            String fileUrl = uploadFileViaSFTP(inputStream, uniqueName);
-
-            if (fileUrl != null) {
-                saveFileMetadata(file, uniqueName);
-                System.out.println("Uploaded: " + fileUrl);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to upload file: " + e.getMessage(), e);
-        }
+        return filelist;
     }
 
     private String uploadFileViaSFTP(InputStream inputStream, String fileName) {
@@ -99,15 +104,6 @@ public class UploadLargeFile {
             if (sftpChannel != null) sftpChannel.disconnect();
             if (session != null) session.disconnect();
         }
-    }
-
-    private void saveFileMetadata(MultipartFile file, String uniqueName) {
-        FileEntity entity = new FileEntity();
-        entity.setFileLink(BASE_URL + uniqueName);
-        entity.setFileName(file.getOriginalFilename());
-        entity.setType(file.getContentType());
-//        entity.setFileSize(file.getSize());
-        fileRepository.save(entity);
     }
 
     private String generateUniqueFileName(String originalFilename) {
