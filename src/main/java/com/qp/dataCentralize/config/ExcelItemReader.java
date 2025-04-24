@@ -155,7 +155,6 @@ import org.springframework.batch.item.ItemReader;
 
 import com.qp.dataCentralize.entity.Datas;
 
-
 public class ExcelItemReader implements ItemReader<Datas> {
 
 	private String filePath;
@@ -211,6 +210,7 @@ public class ExcelItemReader implements ItemReader<Datas> {
 
 			if (header != null && cell != null) {
 				String cellValue = getCellValueAsString(cell);
+				System.out.println(cellValue);
 				switch (header) {
 				case "name":
 					data.setName(cellValue);
@@ -245,13 +245,17 @@ public class ExcelItemReader implements ItemReader<Datas> {
 	private String getCellValueAsString(Cell cell) {
 		switch (cell.getCellType()) {
 		case STRING:
-			return cell.getStringCellValue();
+			System.out.println("string: " + cell.getNumericCellValue());
+			return cell.getStringCellValue().toLowerCase();
 		case NUMERIC:
+			System.out.println("numerics: " + cell.getNumericCellValue());
 			return String.valueOf(cell.getNumericCellValue());
 		case BOOLEAN:
+			System.out.println("boolean: " + cell.getNumericCellValue());
 			return String.valueOf(cell.getBooleanCellValue());
 		case FORMULA:
-			return cell.getCellFormula();
+			System.out.println("formula: " + cell.getNumericCellValue());
+			return cell.getCellFormula().toLowerCase();
 		case BLANK:
 			return "";
 		default:

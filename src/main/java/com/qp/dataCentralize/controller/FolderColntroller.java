@@ -17,7 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.qp.dataCentralize.entity.FavoriteFolders;
-import com.qp.dataCentralize.service.FileUploader;
+import com.qp.dataCentralize.helper.FileUploader;
 import com.qp.dataCentralize.service.FolderService;
 import com.qp.dataCentralize.service.UserService;
 
@@ -76,10 +76,11 @@ public class FolderColntroller {
 		return folderService.handleLargeFile(files, folderId, user);
 	}
 
-	@GetMapping("/getFolders")
+	@GetMapping("/getFolders/{department}")
 	public Object getAllFolders(@RequestParam(defaultValue = "0") int pageNo,
-			@RequestParam(defaultValue = "10") int pageSize, @RequestHeader("Authorization") String token) {
+			@RequestParam(defaultValue = "10") int pageSize, @RequestHeader("Authorization") String token, @PathVariable String department) {
 		Map<String, Object> map = new HashMap<String, Object>();
+		System.out.println("page ****"+pageNo+" "+pageSize);
 		JsonNode user = userService.validateToken(token);
 		if (user == null) {
 			map.put("message", "Invalid Token or User Not found");
@@ -87,7 +88,7 @@ public class FolderColntroller {
 			map.put("status", "fail");
 			return ResponseEntity.badRequest().body(map);
 		}
-		return folderService.getAllFolders(pageNo, pageSize);
+		return folderService.getAllFolders(department,pageNo, pageSize);
 	}
 
 	@GetMapping("/getFiles")
@@ -127,5 +128,34 @@ public class FolderColntroller {
 			return ResponseEntity.badRequest().body(map);
 		}
 		return folderService.getAllFavorites();
+	}
+	
+	@GetMapping("/unstar/favorites")
+	public ResponseEntity<Map<String, Object>> unStarFavorites(@RequestHeader("Authorization") String token, @RequestParam int id,@RequestParam String type) {
+		Map<String, Object> map = new HashMap<String, Object>();
+		JsonNode user = userService.validateToken(token);
+		if (user == null) {
+			map.put("message", "Invalid Token or User Not found");
+			map.put("code", 400);
+			map.put("status", "fail");
+			return ResponseEntity.badRequest().body(map);
+		}
+		return folderService.unStarFavorites(id,type);
+	}
+
+	@GetMapping("/get/accounts/dashboard")
+	public ResponseEntity<Map<String, Object>> getAccountsDashboard(
+			@RequestHeader("Authorization") String token,
+			@RequestParam(defaultValue = "0") int pageNo,
+			@RequestParam(defaultValue = "10") int pageSize) {
+		Map<String, Object> map = new HashMap<String, Object>();
+		JsonNode user = userService.validateToken(token);
+		if (user == null) {
+			map.put("message", "Invalid Token or User Not found");
+			map.put("code", 400);
+			map.put("status", "fail");
+			return ResponseEntity.badRequest().body(map);
+		}
+		return folderService.getAccountsDashboard(user, pageNo, pageSize);
 	}
 }

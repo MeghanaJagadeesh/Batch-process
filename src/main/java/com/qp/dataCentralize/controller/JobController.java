@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.qp.dataCentralize.entity.Datas;
 import com.qp.dataCentralize.service.JobService;
 import com.qp.dataCentralize.service.UserService;
 
@@ -27,6 +29,19 @@ public class JobController {
 
 	@Autowired
 	UserService userService;
+	
+	@PostMapping("/add/customers")
+	public ResponseEntity<Map<String, Object>> addCustomers(@RequestBody Datas data, @RequestHeader("Authorization") String token){
+		Map<String, Object> map = new HashMap<String, Object>();
+		JsonNode user = userService.validateToken(token);
+		if (user == null) {
+			map.put("message", "Invalid Token or User Not found");
+			map.put("code", 400);
+			map.put("status", "fail");
+			return ResponseEntity.badRequest().body(map);
+		}
+		return jobService.addCustomers(data,user);
+	}
 
 	@PostMapping("/importCustomers")
 	public ResponseEntity<Map<String, Object>> importCsvToDBJob(@RequestParam("file") MultipartFile file,

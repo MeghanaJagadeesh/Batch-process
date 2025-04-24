@@ -1,11 +1,10 @@
 package com.qp.dataCentralize.config;
 
+import com.qp.dataCentralize.entity.Datas;
 import org.springframework.batch.item.file.LineMapper;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
-
-import com.qp.dataCentralize.entity.Datas;
 
 public class DynamicLineMapper implements LineMapper<Datas> {
 

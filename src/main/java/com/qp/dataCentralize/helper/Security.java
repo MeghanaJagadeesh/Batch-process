@@ -1,4 +1,4 @@
-package com.qp.dataCentralize.service;
+package com.qp.dataCentralize.helper;
 
 import java.security.MessageDigest;
 import java.util.Arrays;

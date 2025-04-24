@@ -90,7 +90,7 @@ public class CustomFileItemReader implements ItemReader<Datas> {
 				Map<String, String> headerMappings = new HashMap<>();
 				headerMappings.put("name", "name");
 				headerMappings.put("email", "email");
-				headerMappings.put("phone number", "phoneNumber");
+				headerMappings.put("phone number", "phoneNumber");				
 				headerMappings.put("category", "category");
 				headerMappings.put("designation", "designation");
 				headerMappings.put("address", "address");
@@ -103,10 +103,12 @@ public class CustomFileItemReader implements ItemReader<Datas> {
 				List<String> validHeaders = new ArrayList<>();
 				for (String header : headers) {
 					String trimmedHeader = header.trim().toLowerCase();
+					System.out.println(trimmedHeader);
 					if (headerMappings.containsKey(trimmedHeader)) {
 						validHeaders.add(headerMappings.get(trimmedHeader));
 					}
 				}
+				System.out.println("validate "+validHeaders);
 				String[] mappedHeaders = validHeaders.toArray(new String[0]);
 				log.info("Mapped Headers: " + Arrays.toString(mappedHeaders));
 

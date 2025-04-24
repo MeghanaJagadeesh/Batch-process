@@ -5,6 +5,9 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,7 +44,7 @@ public class JobService {
 
 	@Autowired
 	UserService userService;
-	
+
 	@Autowired
 	DatasRepo datasRepo;
 
@@ -135,25 +138,48 @@ public class JobService {
 		return dao.getPaginatedData(pageNo, pageSize, category);
 	}
 
-	 public Page<Datas> searchText(String searchText, int pageNo, int pageSize) {
-	        Specification<Datas> spec = (root, query, criteriaBuilder) -> {
-	            List<Predicate> predicates = new ArrayList<>();
+	public Page<Datas> searchText(String searchText, int pageNo, int pageSize) {
+		Specification<Datas> spec = (root, query, criteriaBuilder) -> {
+			List<Predicate> predicates = new ArrayList<>();
 
-	            predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), "%" + searchText.toLowerCase() + "%"));
-	            predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("email")), "%" + searchText.toLowerCase() + "%"));
-	            predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("phoneNumber")), "%" + searchText.toLowerCase() + "%"));
-	            predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("category")), "%" + searchText.toLowerCase() + "%"));
-	            predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("designation")), "%" + searchText.toLowerCase() + "%"));
-	            predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("address")), "%" + searchText.toLowerCase() + "%"));
-	            predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("companyName")), "%" + searchText.toLowerCase() + "%"));
-	            predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("industryType")), "%" + searchText.toLowerCase() + "%"));
-	            predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("entryDate")), "%" + searchText.toLowerCase() + "%"));
-	            predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("enteredBy")), "%" + searchText.toLowerCase() + "%"));
+			predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("name")),
+					"%" + searchText.toLowerCase() + "%"));
+			predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("email")),
+					"%" + searchText.toLowerCase() + "%"));
+			predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("phoneNumber")),
+					"%" + searchText.toLowerCase() + "%"));
+			predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("category")),
+					"%" + searchText.toLowerCase() + "%"));
+			predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("designation")),
+					"%" + searchText.toLowerCase() + "%"));
+			predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("address")),
+					"%" + searchText.toLowerCase() + "%"));
+			predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("companyName")),
+					"%" + searchText.toLowerCase() + "%"));
+			predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("industryType")),
+					"%" + searchText.toLowerCase() + "%"));
+			predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("entryDate")),
+					"%" + searchText.toLowerCase() + "%"));
+			predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("enteredBy")),
+					"%" + searchText.toLowerCase() + "%"));
 
-	            return criteriaBuilder.or(predicates.toArray(new Predicate[0]));
-	        };
-	        Pageable pageable = PageRequest.of(pageNo, pageSize);
-	        return datasRepo.findAll(spec,pageable);
-	    }
+			return criteriaBuilder.or(predicates.toArray(new Predicate[0]));
+		};
+		Pageable pageable = PageRequest.of(pageNo, pageSize);
+		return datasRepo.findAll(spec, pageable);
+	}
+
+	public ResponseEntity<Map<String, Object>> addCustomers(Datas data, JsonNode user) {
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.of("UTC"));
+		Instant now = Instant.now();
+		data.setEntryDate(formatter.format(now));
+		data.setEnteredBy(userService.getCreatedByInfo(user));
+		datasRepo.save(data);
+		Map<String, Object> map = new HashMap<String, Object>();
+		map.put("message", "Data added successfully");
+		map.put("code", HttpStatus.OK.value());
+		map.put("status", "success");
+		return ResponseEntity.status(HttpStatus.OK).body(map);
+	}
 
 }

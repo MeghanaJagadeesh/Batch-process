@@ -10,7 +10,6 @@ import com.qp.dataCentralize.entity.FavoriteFolders;
 @Repository
 public interface FavoriteFolderRepository extends JpaRepository<FavoriteFolders, Integer> {
 
-	 @Query("SELECT f FROM FavoriteFolders f WHERE f.entityId = :entityId AND f.type = :type")
-	    FavoriteFolders findByEntityIdAndType(@Param("entityId") int entityId, @Param("type") String type);
-
+	@Query("SELECT f FROM FavoriteFolders f WHERE f.entityId = :entityId AND f.type = :type")
+	FavoriteFolders findByEntityIdAndType(@Param("entityId") int entityId, @Param("type") String type);
 }

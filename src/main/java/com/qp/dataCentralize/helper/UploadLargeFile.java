@@ -1,4 +1,4 @@
-package com.qp.dataCentralize.service;
+package com.qp.dataCentralize.helper;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -24,13 +24,22 @@ import com.qp.dataCentralize.entity.FileEntity;
 
 @Service
 public class UploadLargeFile {
-
+//global
     private static final int SFTP_PORT = 22;
     private static final String SFTP_USER = "dh_gmj3vr";
     private static final String SFTP_PASSWORD = "Srikrishna@0700";
     private static final String SFTP_HOST = "pdx1-shared-a2-03.dreamhost.com";
     private static final String SFTP_DIRECTORY = "/home/dh_gmj3vr/mantramatrix.in/documents/";
     private static final String BASE_URL = "https://mantramatrix.in/documents/";
+
+
+    //    local
+//    private final int SFTP_PORT = 22;
+//    private final String SFTP_USER = "dh_nw536f";
+//    private final String SFTP_PASSWORD = "Srikrishna@0700";
+//    private final String SFTP_HOST = "pdx1-shared-a2-03.dreamhost.com";
+//    private final String SFTP_DIRECTORY = "/home/dh_nw536f/aws.quantumparadigm.in/documents/";
+//    private final String BASE_URL = "https://aws.quantumparadigm.in/documents/";
 
     // Increased buffer size (1MB)
     private static final int BUFFER_SIZE = 10* 1024 * 1024;
