@@ -1,37 +1,27 @@
 package com.qp.dataCentralize.helper;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-import javax.transaction.Transactional;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
-import com.jcraft.jsch.ChannelSftp;
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.JSchException;
-import com.jcraft.jsch.Session;
-import com.jcraft.jsch.SftpException;
+import com.jcraft.jsch.*;
 import com.qp.dataCentralize.entity.FavoriteFolders;
 import com.qp.dataCentralize.entity.FileEntity;
 import com.qp.dataCentralize.entity.FolderEntity;
 import com.qp.dataCentralize.repository.FavoriteFolderRepository;
 import com.qp.dataCentralize.repository.FileRepository;
 import com.qp.dataCentralize.repository.FolderRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.transaction.Transactional;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Service
 public class FileUploader {
@@ -64,6 +54,7 @@ public class FileUploader {
 
     private final ExecutorService executorService = Executors.newFixedThreadPool(10);
 
+
     public List<FileEntity> handleFileUpload(MultipartFile[] files) {
         List<FileEntity> filelist = new ArrayList<FileEntity>();
         CompletableFuture<Void>[] futures = new CompletableFuture[files.length];
@@ -72,12 +63,13 @@ public class FileUploader {
             try {
                 byte[] fileBytes = file.getBytes();
                 String originalFilename = file.getOriginalFilename();
+                ;
+                assert originalFilename != null;
                 String uniqueFileName = generateUniqueFileName(originalFilename);
 
                 futures[i] = CompletableFuture.runAsync(() -> {
-                    String fileUrl = uploadFileViaSFTP(fileBytes, uniqueFileName);
+                   String fileUrl = uploadFileViaSFTP(fileBytes, uniqueFileName);
                     if (fileUrl != null) {
-
                         FileEntity fileEntity = new FileEntity();
                         fileEntity.setFileLink(fileUrl);
                         fileEntity.setFileName(file.getOriginalFilename());
@@ -88,13 +80,13 @@ public class FileUploader {
                     }
                 }, executorService);
             } catch (IOException e) {
-                new RuntimeException("File Not supported");
+                throw new RuntimeException("File Not supported");
             }
         }
         try {
             CompletableFuture.allOf(futures).get();
         } catch (Exception e) {
-            new RuntimeException(e.getMessage());
+            throw new RuntimeException(e.getMessage());
         }
         return filelist;
     }
@@ -118,12 +110,14 @@ public class FileUploader {
             }
             return BASE_URL + fileName;
         } catch (JSchException | SftpException | IOException e) {
+            e.printStackTrace();
             return null;
         } finally {
             if (sftpChannel != null) {
                 try {
                     sftpChannel.disconnect();
                 } catch (Exception e) {
+                    e.printStackTrace();
                     return null;
                 }
             }
@@ -131,6 +125,7 @@ public class FileUploader {
                 try {
                     session.disconnect();
                 } catch (Exception e) {
+                    e.printStackTrace();
                     return null;
                 }
             }
@@ -149,11 +144,8 @@ public class FileUploader {
 
     public ResponseEntity<Map<String, Object>> deleteFile(int folderId, FileEntity fileEntity) {
         Map<String, Object> response = new HashMap<>();
-        System.out.println("link " + fileEntity.getFileLink());
-        System.out.println("baseurl " + BASE_URL);
         String fileName = fileEntity.getFileLink().replace(BASE_URL, "");
         String remoteFilePath = SFTP_DIRECTORY + fileName;
-        System.out.println(remoteFilePath);
         JSch jsch = new JSch();
         Session session = null;
         ChannelSftp sftpChannel = null;
@@ -208,5 +200,51 @@ public class FileUploader {
         files.removeIf(file -> file.getId() == fileId);
         folderRepository.save(folder);
         fileRepository.deleteById(fileId);
+    }
+
+    public ResponseEntity<Map<String, Object>> deleteUrl(String fileurl) {
+        Map<String, Object> response = new HashMap<>();
+        String fileName = fileurl.replace(BASE_URL, "");
+        String remoteFilePath = SFTP_DIRECTORY + fileName;
+        JSch jsch = new JSch();
+        Session session = null;
+        ChannelSftp sftpChannel = null;
+        try {
+            session = jsch.getSession(SFTP_USER, SFTP_HOST, SFTP_PORT);
+            session.setPassword(SFTP_PASSWORD);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect();
+
+            sftpChannel = (ChannelSftp) session.openChannel("sftp");
+            sftpChannel.connect();
+
+            sftpChannel.rm(remoteFilePath);
+
+            response.put("code", 200);
+            response.put("status", "success");
+            response.put("message", "File deleted successfully");
+            return ResponseEntity.ok(response);
+
+        } catch (JSchException | SftpException e) {
+            e.printStackTrace();
+            String errorMsg = "Error deleting file: " + e.getMessage();
+            response.put("code", 400);
+            response.put("status", "error");
+            response.put("message", errorMsg);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+
+        } catch (RuntimeException e) {
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            response.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        } finally {
+            if (sftpChannel != null && sftpChannel.isConnected()) {
+                sftpChannel.disconnect();
+            }
+            if (session != null && session.isConnected()) {
+                session.disconnect();
+            }
+        }
     }
 }

@@ -1,12 +1,11 @@
 package com.qp.dataCentralize.config;
 
+import com.qp.dataCentralize.entity.Datas;
+import org.springframework.batch.item.ItemProcessor;
+
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-
-import org.springframework.batch.item.ItemProcessor;
-
-import com.qp.dataCentralize.entity.Datas;
 
 public class DataProcessor implements ItemProcessor<Datas, Datas> {
 

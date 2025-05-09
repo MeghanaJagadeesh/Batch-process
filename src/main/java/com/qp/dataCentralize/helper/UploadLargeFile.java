@@ -1,5 +1,10 @@
 package com.qp.dataCentralize.helper;
 
+import com.jcraft.jsch.*;
+import com.qp.dataCentralize.entity.FileEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,16 +16,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
-import com.jcraft.jsch.ChannelSftp;
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.JSchException;
-import com.jcraft.jsch.Session;
-import com.jcraft.jsch.SftpException;
-import com.qp.dataCentralize.entity.FileEntity;
 
 @Service
 public class UploadLargeFile {
@@ -42,29 +37,29 @@ public class UploadLargeFile {
 //    private final String BASE_URL = "https://aws.quantumparadigm.in/documents/";
 
     // Increased buffer size (1MB)
-    private static final int BUFFER_SIZE = 10* 1024 * 1024;
+    private static final int BUFFER_SIZE = 10 * 1024 * 1024;
 
     // Thread pool for parallel uploads
     private final ExecutorService executorService = Executors.newFixedThreadPool(8);
 
     public List<FileEntity> handleFileUpload(MultipartFile[] files) {
         List<CompletableFuture<Void>> futures = new ArrayList<>();
-        List<FileEntity> filelist=new ArrayList<FileEntity>();
+        List<FileEntity> filelist = new ArrayList<FileEntity>();
         for (MultipartFile file : files) {
             futures.add(CompletableFuture.runAsync(() -> {
-            	try (InputStream inputStream = file.getInputStream()) {
+                try (InputStream inputStream = file.getInputStream()) {
                     String uniqueName = generateUniqueFileName(file.getOriginalFilename());
                     String fileUrl = uploadFileViaSFTP(inputStream, uniqueName);
 
                     if (fileUrl != null) {
 
-						FileEntity fileEntity = new FileEntity();
-						fileEntity.setFileLink(fileUrl);
-						fileEntity.setFileName(file.getOriginalFilename());
-						fileEntity.setType(file.getContentType());
-						fileEntity.setFileSize(file.getSize() + "");
-						fileEntity.setTime(Instant.now());
-						filelist.add(fileEntity);
+                        FileEntity fileEntity = new FileEntity();
+                        fileEntity.setFileLink(fileUrl);
+                        fileEntity.setFileName(file.getOriginalFilename());
+                        fileEntity.setType(file.getContentType());
+                        fileEntity.setFileSize(file.getSize() + "");
+                        fileEntity.setTime(Instant.now());
+                        filelist.add(fileEntity);
                     }
                 } catch (Exception e) {
                     throw new RuntimeException("Failed to upload file: " + e.getMessage(), e);
@@ -74,14 +69,15 @@ public class UploadLargeFile {
 
         try {
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
-            
+
         } catch (Exception e) {
-        	new RuntimeException(e.getMessage());
+            new RuntimeException(e.getMessage());
         }
         return filelist;
     }
 
     private String uploadFileViaSFTP(InputStream inputStream, String fileName) {
+        System.out.println("uploadFileViaSFTP method");
         JSch jsch = new JSch();
         Session session = null;
         ChannelSftp sftpChannel = null;
@@ -116,9 +112,9 @@ public class UploadLargeFile {
     }
 
     private String generateUniqueFileName(String originalFilename) {
-        String ext = originalFilename.contains(".") 
-            ? originalFilename.substring(originalFilename.lastIndexOf(".")) 
-            : "";
+        String ext = originalFilename.contains(".")
+                ? originalFilename.substring(originalFilename.lastIndexOf("."))
+                : "";
         return UUID.randomUUID() + ext;
     }
 }
@@ -230,7 +226,7 @@ public class UploadLargeFile {
 //        entity.setFileLink(BASE_URL + uniqueName);
 //        entity.setFileName(file.getOriginalFilename());
 //        entity.setType(file.getContentType());
-////        entity.setFileSize(file.getSize());
+/// /        entity.setFileSize(file.getSize());
 //        fileRepository.save(entity);
 //    }
 //

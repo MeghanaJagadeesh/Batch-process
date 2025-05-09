@@ -1,5 +1,8 @@
 package com.qp.dataCentralize.config;
 
+import com.qp.dataCentralize.entity.Datas;
+import com.qp.dataCentralize.repository.DatasRepo;
+import lombok.AllArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
@@ -16,11 +19,6 @@ import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
-import com.qp.dataCentralize.entity.Datas;
-import com.qp.dataCentralize.repository.DatasRepo;
-
-import lombok.AllArgsConstructor;
 
 @Configuration
 @EnableBatchProcessing

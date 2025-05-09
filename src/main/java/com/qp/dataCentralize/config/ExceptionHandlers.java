@@ -11,16 +11,16 @@ import java.util.Map;
 @RestControllerAdvice
 public class ExceptionHandlers extends RuntimeException {
 
-	@Serial
-	private static final long serialVersionUID = 1L;
+    @Serial
+    private static final long serialVersionUID = 1L;
 
-	@ExceptionHandler(Exception.class)
-	public ResponseEntity<?> handleJWTException(Exception e) {
-		Map<String, Object> map = new HashMap<String, Object>();
-		map.put("message", e.getMessage());
-		map.put("code", 500);
-		map.put("status", "fail");
-		map.put("data", e);
-		return ResponseEntity.internalServerError().body(map);
-	}
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<?> handleJWTException(Exception e) {
+        Map<String, Object> map = new HashMap<String, Object>();
+        map.put("message", e.getMessage());
+        map.put("code", 500);
+        map.put("status", "fail");
+        map.put("data", e);
+        return ResponseEntity.internalServerError().body(map);
+    }
 }

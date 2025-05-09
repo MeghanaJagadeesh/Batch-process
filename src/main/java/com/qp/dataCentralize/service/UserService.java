@@ -1,7 +1,10 @@
 package com.qp.dataCentralize.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.qp.dataCentralize.entity.*;
+import com.qp.dataCentralize.entity.FavoriteFolders;
+import com.qp.dataCentralize.entity.FileEntity;
+import com.qp.dataCentralize.entity.FolderEntity;
+import com.qp.dataCentralize.entity.LeadsData;
 import com.qp.dataCentralize.helper.FileUploader;
 import com.qp.dataCentralize.helper.Security;
 import com.qp.dataCentralize.repository.DatasRepo;
@@ -110,14 +113,11 @@ public class UserService {
     }
 
     public ResponseEntity<Map<String, Object>> deleteFile(int folderId, FileEntity fileEntity) {
-        System.out.println("service");
         return fileUploader.deleteFile(folderId, fileEntity);
     }
 
     public ResponseEntity<Map<String, Object>> deleteFolder(int folderId) {
-        System.out.println("delete file");
         FavoriteFolders fav = favoriteFolderRepository.findByEntityIdAndType(folderId, "folder");
-        System.out.println(fav);
         if (fav != null) {
             favoriteFolderRepository.delete(fav);
         }
@@ -126,7 +126,6 @@ public class UserService {
         List<FileEntity> files = new ArrayList<>(folder.getFiles());
         for (FileEntity fileEntity : files) {
             fileUploader.deleteFile(folderId, fileEntity);
-            System.out.println("deleted");
         }
         folderRepository.delete(folder);
         map.put("message", "folder deleted successfully");
@@ -151,7 +150,7 @@ public class UserService {
     }
 
     public Page<LeadsData> getAllLeads(JsonNode user, int pagesize, int pageno) {
-        Pageable pageable=PageRequest.of(pageno,pagesize);
+        Pageable pageable = PageRequest.of(pageno, pagesize);
         return leadsRepository.findAllByOrderByEntryDateDesc(pageable);
     }
 
@@ -178,8 +177,8 @@ public class UserService {
     }
 
     public Page<LeadsData> fetchByStatus(JsonNode user, String status, int pageno, int pagesize) {
-        Pageable pageable=PageRequest.of(pageno,pagesize);
-        return leadsRepository.findAllByStatusOrderByEntryDateDesc(status,pageable);
+        Pageable pageable = PageRequest.of(pageno, pagesize);
+        return leadsRepository.findAllByStatusOrderByEntryDateDesc(status, pageable);
     }
 
     public Page<LeadsData> search(String searchText, int pageno, int pagesize) {
@@ -208,15 +207,15 @@ public class UserService {
             return criteriaBuilder.or(predicates.toArray(new Predicate[0]));
         };
         Pageable pageable = PageRequest.of(pageno, pagesize);
-        return leadsRepository.findAll(spec,pageable);
+        return leadsRepository.findAll(spec, pageable);
     }
 
     public ResponseEntity<Map<String, Object>> deleteLead(int id) {
         leadsRepository.deleteById(id);
-        Map<String, Object> map=new HashMap<>();
-        map.put("message","deleted successfully");
-        map.put("code",200);
-        map.put("status","success");
+        Map<String, Object> map = new HashMap<>();
+        map.put("message", "deleted successfully");
+        map.put("code", 200);
+        map.put("status", "success");
         return ResponseEntity.ok(map);
     }
 }

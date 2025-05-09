@@ -8,29 +8,29 @@ import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 
 public class DynamicLineMapper implements LineMapper<Datas> {
 
-	private DefaultLineMapper<Datas> lineMapper;
+    private DefaultLineMapper<Datas> lineMapper;
 
-	public DynamicLineMapper() {
-		this.lineMapper = new DefaultLineMapper<>();
-	}
+    public DynamicLineMapper() {
+        this.lineMapper = new DefaultLineMapper<>();
+    }
 
-	@Override
-	public Datas mapLine(String line, int lineNumber) throws Exception {
-		if (lineNumber == 0) {
-			// Read the header row and set the column names
-			String[] headers = line.split(",");
-			DelimitedLineTokenizer lineTokenizer = new DelimitedLineTokenizer();
-			lineTokenizer.setDelimiter(",");
-			lineTokenizer.setNames(headers);
+    @Override
+    public Datas mapLine(String line, int lineNumber) throws Exception {
+        if (lineNumber == 0) {
+            // Read the header row and set the column names
+            String[] headers = line.split(",");
+            DelimitedLineTokenizer lineTokenizer = new DelimitedLineTokenizer();
+            lineTokenizer.setDelimiter(",");
+            lineTokenizer.setNames(headers);
 
-			BeanWrapperFieldSetMapper<Datas> fieldSetMapper = new BeanWrapperFieldSetMapper<>();
-			fieldSetMapper.setTargetType(Datas.class);
+            BeanWrapperFieldSetMapper<Datas> fieldSetMapper = new BeanWrapperFieldSetMapper<>();
+            fieldSetMapper.setTargetType(Datas.class);
 
-			lineMapper.setLineTokenizer(lineTokenizer);
-			lineMapper.setFieldSetMapper(fieldSetMapper);
-		}
+            lineMapper.setLineTokenizer(lineTokenizer);
+            lineMapper.setFieldSetMapper(fieldSetMapper);
+        }
 
-		// Use the tokenizer and mapper to map the line
-		return lineMapper.mapLine(line, lineNumber);
-	}
+        // Use the tokenizer and mapper to map the line
+        return lineMapper.mapLine(line, lineNumber);
+    }
 }

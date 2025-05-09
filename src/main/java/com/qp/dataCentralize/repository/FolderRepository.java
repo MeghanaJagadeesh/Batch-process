@@ -17,11 +17,17 @@ public interface FolderRepository extends JpaRepository<FolderEntity, Integer> {
 
 	public FolderEntity findByFolderName(String folderName);
 
-	@Query("SELECT NEW com.qp.dataCentralize.entity.FolderDTO(" +
+//	@Query("SELECT NEW com.qp.dataCentralize.entity.FolderDTO(" +
+//			"f.entityId, f.folderName, f.time, f.createdBy) " +
+//			"FROM FolderEntity f " +
+//			"WHERE f.createdBy LIKE %:department%")
+//	Page<FolderEntity> findFolderNamesAndIds(@Param("department") String department,Pageable pageable);
+
+	@Query("SELECT new com.qp.dataCentralize.entity.FolderDTO(" +
 			"f.entityId, f.folderName, f.time, f.createdBy) " +
 			"FROM FolderEntity f " +
-			"WHERE f.createdBy LIKE %:department%")
-	Page<FolderEntity> findFolderNamesAndIds(@Param("department") String department,Pageable pageable);
+			"WHERE f.createdBy LIKE %:searchPattern%")
+	Page<FolderDTO> findFolderNamesAndIds(@Param("searchPattern") String searchPattern, Pageable pageable);
 
 	@Query("SELECT f FROM FolderEntity f JOIN FETCH f.files files WHERE f.entityId = :folderId ORDER BY files.time DESC")
 	FolderEntity findFolderWithFilesSortedByTime(@Param("folderId") int folderId);

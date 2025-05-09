@@ -45,7 +45,6 @@ public class UserController {
         String userEmail = response.get("userEmail").asText();
         String password = response.get("userPassword").asText();
         if (username.equals(adminName) && userEmail.equals(adminEmail) && password.equals(adminPassword)) {
-            System.out.println("controller");
             return userService.deleteFile(folderId, fileEntity);
         } else {
             map.put("message", "Employess Restricted, Admin use only");
@@ -216,7 +215,6 @@ public class UserController {
         String userEmail = response.get("userEmail").asText();
         String password = response.get("userPassword").asText();
         if (username.equals(adminName) && userEmail.equals(adminEmail) && password.equals(adminPassword)) {
-            System.out.println("controller");
             return userService.deleteLead(id);
         } else {
             map.put("message", "Employess Restricted, Admin use only");
