@@ -8,6 +8,7 @@ import com.qp.dataCentralize.repository.FavoriteFolderRepository;
 import com.qp.dataCentralize.repository.FileRepository;
 import com.qp.dataCentralize.repository.FolderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -35,25 +36,25 @@ public class FileUploader {
     @Autowired
     FavoriteFolderRepository favoriteFolderRepository;
 
+    @Value("${server.sftp_port}")
+    int SFTP_PORT;
 
-//    global
-	private final int SFTP_PORT = 22;
-	private final String SFTP_USER = "dh_gmj3vr";
-	private final String SFTP_PASSWORD = "Srikrishna@0700";
-	private final String SFTP_HOST = "pdx1-shared-a2-03.dreamhost.com";
-	private final String SFTP_DIRECTORY = "/home/dh_gmj3vr/mantramatrix.in/documents/";
-	private final String BASE_URL = "https://mantramatrix.in/documents/";
+    @Value("${server.sftp_user}")
+    String SFTP_USER;
 
-    //    local
-//    private final int SFTP_PORT = 22;
-//    private final String SFTP_USER = "dh_nw536f";
-//    private final String SFTP_PASSWORD = "Srikrishna@0700";
-//    private final String SFTP_HOST = "pdx1-shared-a2-03.dreamhost.com";
-//    private final String SFTP_DIRECTORY = "/home/dh_nw536f/aws.quantumparadigm.in/documents/";
-//    private final String BASE_URL = "https://aws.quantumparadigm.in/documents/";
+    @Value("${server.sftp_password}")
+    String SFTP_PASSWORD;
+
+    @Value("${server.sftp_host}")
+    String SFTP_HOST;
+
+    @Value("${server.sftp_directory}")
+    String SFTP_DIRECTORY;
+
+    @Value("${server.baseurl}")
+    String BASE_URL;
 
     private final ExecutorService executorService = Executors.newFixedThreadPool(10);
-
 
     public List<FileEntity> handleFileUpload(MultipartFile[] files) {
         List<FileEntity> filelist = new ArrayList<FileEntity>();
@@ -68,7 +69,7 @@ public class FileUploader {
                 String uniqueFileName = generateUniqueFileName(originalFilename);
 
                 futures[i] = CompletableFuture.runAsync(() -> {
-                   String fileUrl = uploadFileViaSFTP(fileBytes, uniqueFileName);
+                    String fileUrl = uploadFileViaSFTP(fileBytes, uniqueFileName);
                     if (fileUrl != null) {
                         FileEntity fileEntity = new FileEntity();
                         fileEntity.setFileLink(fileUrl);
@@ -133,13 +134,7 @@ public class FileUploader {
     }
 
     private String generateUniqueFileName(String originalFilename) {
-        String extension = "";
-        int dotIndex = originalFilename.lastIndexOf(".");
-        if (dotIndex >= 0) {
-            extension = originalFilename.substring(dotIndex);
-        }
-
-        return UUID.randomUUID().toString() + extension;
+        return originalFilename + UUID.randomUUID().toString();
     }
 
     public ResponseEntity<Map<String, Object>> deleteFile(int folderId, FileEntity fileEntity) {
@@ -159,8 +154,8 @@ public class FileUploader {
             sftpChannel.connect();
 
             sftpChannel.rm(remoteFilePath);
-
             deleteFileFromFolder(folderId, fileEntity.getId());
+            
             response.put("code", 200);
             response.put("status", "success");
             response.put("message", "File deleted successfully");
@@ -191,6 +186,7 @@ public class FileUploader {
 
     @Transactional
     public void deleteFileFromFolder(int folderId, int fileId) {
+        System.out.println(5);
         FavoriteFolders fav = favoriteFolderRepository.findByEntityIdAndType(fileId, "file");
         if (fav != null) {
             favoriteFolderRepository.delete(fav);

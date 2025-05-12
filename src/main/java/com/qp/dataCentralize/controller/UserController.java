@@ -3,6 +3,7 @@ package com.qp.dataCentralize.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.qp.dataCentralize.entity.FileEntity;
 import com.qp.dataCentralize.entity.LeadsData;
+import com.qp.dataCentralize.service.AccountSecurityService;
 import com.qp.dataCentralize.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -18,13 +19,10 @@ public class UserController {
     @Autowired
     UserService userService;
 
-    private String adminName = "Admin";
+    @Autowired
+    AccountSecurityService accountSecurityService;
 
-    private String adminEmail = "admin0700@gmail.com";
-
-    private String adminPassword = "SriAdmin@0700";
-
-    @PostMapping("user/login")
+   @PostMapping("user/login")
     public ResponseEntity<Map<String, Object>> login(@RequestParam String email, @RequestParam String password) {
         return userService.login(email, password);
     }
@@ -41,10 +39,8 @@ public class UserController {
             return ResponseEntity.badRequest().body(map);
         }
         JsonNode response = user.get("body");
-        String username = response.get("userName").asText();
-        String userEmail = response.get("userEmail").asText();
-        String password = response.get("userPassword").asText();
-        if (username.equals(adminName) && userEmail.equals(adminEmail) && password.equals(adminPassword)) {
+        String dept = response.get("userDepartment").asText();
+        if (dept.equals("Admin")) {
             return userService.deleteFile(folderId, fileEntity);
         } else {
             map.put("message", "Employess Restricted, Admin use only");
@@ -58,6 +54,7 @@ public class UserController {
     public ResponseEntity<Map<String, Object>> deleteFolder(@PathVariable int folderId,
                                                             @RequestHeader("Authorization") String token) {
         Map<String, Object> map = new HashMap<String, Object>();
+
         JsonNode user = userService.validateToken(token);
         if (user == null) {
             map.put("message", "Invalid Token or User Not found");
@@ -65,11 +62,10 @@ public class UserController {
             map.put("status", "fail");
             return ResponseEntity.badRequest().body(map);
         }
+        System.out.println(user);
         JsonNode response = user.get("body");
-        String username = response.get("userName").asText();
-        String userEmail = response.get("userEmail").asText();
-        String password = response.get("userPassword").asText();
-        if (username.equals(adminName) && userEmail.equals(adminEmail) && password.equals(adminPassword)) {
+        String dept = response.get("userDepartment").asText();
+        if (dept.equals("Admin")) {
 
             return userService.deleteFolder(folderId);
         } else {
@@ -91,11 +87,10 @@ public class UserController {
             map.put("status", "fail");
             return ResponseEntity.badRequest().body(map);
         }
+        System.out.println(user);
         JsonNode response = user.get("body");
-        String username = response.get("userName").asText();
-        String userEmail = response.get("userEmail").asText();
-        String password = response.get("userPassword").asText();
-        if (username.equals(adminName) && userEmail.equals(adminEmail) && password.equals(adminPassword)) {
+        String dept = response.get("userDepartment").asText();
+        if (dept.equals("Admin")) {
             return userService.deletedata(id);
         } else {
             map.put("message", "Employess Restricted, Admin use only");
@@ -210,11 +205,10 @@ public class UserController {
             map.put("status", "fail");
             return ResponseEntity.badRequest().body(map);
         }
+        System.out.println(user);
         JsonNode response = user.get("body");
-        String username = response.get("userName").asText();
-        String userEmail = response.get("userEmail").asText();
-        String password = response.get("userPassword").asText();
-        if (username.equals(adminName) && userEmail.equals(adminEmail) && password.equals(adminPassword)) {
+        String dept = response.get("userDepartment").asText();
+        if (dept.equals("Admin")) {
             return userService.deleteLead(id);
         } else {
             map.put("message", "Employess Restricted, Admin use only");
@@ -222,5 +216,26 @@ public class UserController {
             map.put("status", "fail");
             return ResponseEntity.badRequest().body(map);
         }
+    }
+
+    @PostMapping("/user/logout")
+    public ResponseEntity<Map<String, Object>> logout(@RequestHeader("Authorization") String token) {
+        Map<String, Object> map = new HashMap<>();
+        JsonNode user = userService.validateToken(token);
+
+        if (user == null) {
+            map.put("message", "Invalid Token or User Not found");
+            map.put("code", 400);
+            map.put("status", "fail");
+            return ResponseEntity.badRequest().body(map);
+        }
+
+        String email = user.get("body").get("userEmail").asText();
+        accountSecurityService.invalidateSession(email);
+
+        map.put("message", "Successfully logged out");
+        map.put("code", 200);
+        map.put("status", "success");
+        return ResponseEntity.ok(map);
     }
 }

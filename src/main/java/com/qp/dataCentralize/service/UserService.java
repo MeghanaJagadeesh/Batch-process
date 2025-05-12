@@ -22,10 +22,7 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.persistence.criteria.Predicate;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class UserService {
@@ -116,23 +113,77 @@ public class UserService {
         return fileUploader.deleteFile(folderId, fileEntity);
     }
 
+//    public ResponseEntity<Map<String, Object>> deleteFolder(int folderId) {
+//        FavoriteFolders fav = favoriteFolderRepository.findByEntityIdAndType(folderId, "folder");
+//        if (fav != null) {
+//            favoriteFolderRepository.delete(fav);
+//        }
+//        Map<String, Object> map = new HashMap<String, Object>();
+//        FolderEntity folder = folderRepository.findById(folderId).get();
+//        List<FileEntity> files = new ArrayList<>(folder.getFiles());
+//        for (FileEntity fileEntity : files) {
+//            fileUploader.deleteFile(folderId, fileEntity);
+//        }
+//        folderRepository.delete(folder);
+//        map.put("message", "folder deleted successfully");
+//        map.put("code", 200);
+//        map.put("status", "success");
+//        return ResponseEntity.ok(map);
+//    }
+
     public ResponseEntity<Map<String, Object>> deleteFolder(int folderId) {
-        FavoriteFolders fav = favoriteFolderRepository.findByEntityIdAndType(folderId, "folder");
+        Map<String, Object> response = new HashMap<>();
+
+        Optional<FolderEntity> optionalFolder = folderRepository.findById(folderId);
+        if (!optionalFolder.isPresent()) {
+            response.put("message", "Folder not found");
+            response.put("code", 404);
+            response.put("status", "fail");
+            return ResponseEntity.status(404).body(response);
+        }
+
+        FolderEntity folder = optionalFolder.get();
+
+        // Start recursive deletion
+        deleteFolderRecursively(folder);
+
+        response.put("message", "Folder deleted successfully");
+        response.put("code", 200);
+        response.put("status", "success");
+        return ResponseEntity.ok(response);
+    }
+
+    private void deleteFolderRecursively(FolderEntity folder) {
+        // Delete files in this folder
+        List<FileEntity> files = new ArrayList<>(folder.getFiles());
+        for (FileEntity fileEntity : files) {
+            fileUploader.deleteFile(folder.getEntityId(), fileEntity);
+        }
+
+        // Recursively delete all subfolders
+        List<FolderEntity> subFolders = new ArrayList<>(folder.getSubFolder());
+        for (FolderEntity subFolder : subFolders) {
+            deleteFolderRecursively(subFolder);
+        }
+
+        // Remove favorite folder if exists
+        FavoriteFolders fav = favoriteFolderRepository.findByEntityIdAndType(folder.getEntityId(), "folder");
         if (fav != null) {
             favoriteFolderRepository.delete(fav);
         }
-        Map<String, Object> map = new HashMap<String, Object>();
-        FolderEntity folder = folderRepository.findById(folderId).get();
-        List<FileEntity> files = new ArrayList<>(folder.getFiles());
-        for (FileEntity fileEntity : files) {
-            fileUploader.deleteFile(folderId, fileEntity);
+
+        // Unlink from parent
+        FolderEntity parent = folder.getParent();
+        if (parent != null) {
+            parent.getSubFolder().removeIf(f -> f.getEntityId() == folder.getEntityId());
+            folder.setParent(null);
+            folderRepository.save(parent);
         }
+
+        // Delete this folder
         folderRepository.delete(folder);
-        map.put("message", "folder deleted successfully");
-        map.put("code", 200);
-        map.put("status", "success");
-        return ResponseEntity.ok(map);
     }
+
 
     public ResponseEntity<Map<String, Object>> deletedata(int id) {
         return null;

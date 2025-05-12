@@ -3,14 +3,10 @@ package com.qp.dataCentralize.entity;
 import java.time.Instant;
 import java.util.List;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.OneToMany;
+import javax.persistence.*;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.Data;
 
 @Entity
@@ -23,6 +19,15 @@ public class FolderEntity {
 	private String folderName;
 	private Instant time;
 	private String createdBy;
-	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-	List<FileEntity> files;
+
+	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	private List<FileEntity> files;
+
+	@OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	@JsonManagedReference
+	private List<FolderEntity> subFolder;
+
+	@ManyToOne
+	@JsonBackReference
+	private FolderEntity parent;
 }

@@ -1,10 +1,7 @@
 package com.qp.dataCentralize.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.qp.dataCentralize.entity.FavoriteFolders;
-import com.qp.dataCentralize.entity.FileEntity;
-import com.qp.dataCentralize.entity.FolderDTO;
-import com.qp.dataCentralize.entity.FolderEntity;
+import com.qp.dataCentralize.entity.*;
 import com.qp.dataCentralize.helper.FileUploader;
 import com.qp.dataCentralize.helper.UploadLargeFile;
 import com.qp.dataCentralize.repository.FavoriteFolderRepository;
@@ -22,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class FolderService {
@@ -50,9 +48,12 @@ public class FolderService {
     public ResponseEntity<Map<String, Object>> saveFolder(String folderName, JsonNode user) {
 
         Map<String, Object> response = new HashMap<String, Object>();
-        FolderEntity folder = folderRepository.findByFolderName(folderName);
-        if (folder != null) {
-            response.put("message", "folder already exists");
+        System.out.println("user:  "+user);
+        String department=user.get("body").get("userDepartment").asText();
+        String searchPattern = "(" + department + ")";
+        boolean exists = folderRepository.existsByFolderNameAndDepartment(folderName, searchPattern);
+        if (exists) {
+            response.put("message", "Folder with this name already exists in your department");
             response.put("code", HttpStatus.BAD_REQUEST.value());
             response.put("status", "fail");
             return ResponseEntity.badRequest().body(response);
@@ -68,6 +69,41 @@ public class FolderService {
         return ResponseEntity.ok().body(response);
     }
 
+    public ResponseEntity<Map<String, Object>> createSubFolder(String folderName, JsonNode user, int rootFolderId) {
+        Map<String, Object> response = new HashMap<>();
+
+        FolderEntity parentFolder = folderRepository.findById(rootFolderId)
+                .orElseThrow(() -> new RuntimeException("Parent folder not found"));
+
+//        FolderEntity folder = folderRepository.findByFolderName(folderName);
+//        if (folder != null) {
+//            response.put("message", "folder already exists");
+//            response.put("code", HttpStatus.BAD_REQUEST.value());
+//            response.put("status", "fail");
+//            return ResponseEntity.badRequest().body(response);
+//        }
+        Optional<FolderEntity> existingFolder = folderRepository.findByFolderNameAndParent(folderName, parentFolder);
+        if (existingFolder.isPresent()) {
+            response.put("message", "Folder already exists under this parent");
+            response.put("code", HttpStatus.BAD_REQUEST.value());
+            response.put("status", "fail");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        FolderEntity subFolder = new FolderEntity();
+        subFolder.setFolderName(folderName);
+        subFolder.setTime(Instant.now());
+        subFolder.setCreatedBy(userService.getCreatedByInfo(user));
+        subFolder.setParent(parentFolder); // Set the parent link
+
+        folderRepository.save(subFolder);
+
+        response.put("message", "Subfolder created");
+        response.put("code", HttpStatus.OK.value());
+        response.put("status", "success");
+        return ResponseEntity.ok(response);
+    }
+
 //    public ResponseEntity<Page<FolderEntity>> getAllFolders(String department, int pageNo, int pageSize) {
 //        Pageable pageable = PageRequest.of(pageNo, pageSize, Sort.by("time").descending());
 //        Page<FolderEntity> obj = folderRepository.findFolderNamesAndIds(department, pageable);
@@ -77,14 +113,66 @@ public class FolderService {
     public ResponseEntity<Page<FolderDTO>> getAllFolders(String department, int pageNo, int pageSize) {
         Pageable pageable = PageRequest.of(pageNo, pageSize, Sort.by("time").descending());
         String searchPattern = "(" + department + ")";
-        Page<FolderDTO> obj = folderRepository.findFolderNamesAndIds(searchPattern, pageable);
+        Page<FolderDTO> obj = folderRepository.findRootFoldersByDepartment(searchPattern, pageable);
         return ResponseEntity.ok(obj);
     }
 
 
-    public ResponseEntity<FolderEntity> getAllFile(int folderId) {
-        return ResponseEntity.ok(folderRepository.findFolderWithFilesSortedByTime(folderId));
+//    public ResponseEntity<?> getAllFile(int folderId) {
+////        return ResponseEntity.ok(folderRepository.findFolderWithFilesSortedByTime(folderId));
+//        FolderEntity folder = folderRepository.findFolderWithFilesAndSubFolders(folderId);
+//        System.out.println("folder: "+folder);
+//        if (folder == null) {
+//            return ResponseEntity.notFound().build();
+//        }
+//        List<FolderDTO> subFolders = folder.getSubFolder().stream()
+//                .map(sub -> new FolderDTO(sub.getEntityId(), sub.getFolderName(), sub.getTime(), sub.getCreatedBy()))
+//                .toList();
+//
+//        FolderWithFilesDTO dto = new FolderWithFilesDTO(
+//                folder.getEntityId(),
+//                folder.getFolderName(),
+//                folder.getTime(),
+//                folder.getCreatedBy(),
+//                folder.getFiles(),
+//                subFolders
+//        );
+//
+//        return ResponseEntity.ok(dto);
+//
+//    }
+
+public ResponseEntity<?> getAllFile(int folderId) {
+    FolderEntity folder = folderRepository.findFolderWithFiles(folderId); // files fetched
+    if (folder == null) {
+        return ResponseEntity.notFound().build();
     }
+
+    List<FolderEntity> subFolders = folderRepository.findSubFolders(folderId); // subfolders fetched separately
+
+    // Sort files by time descending
+    List<FileEntity> sortedFiles = folder.getFiles().stream()
+            .sorted(Comparator.comparing(FileEntity::getTime).reversed())
+            .collect(Collectors.toList());
+
+    // Sort subfolders by time descending and convert to DTO
+    List<FolderDTO> sortedSubFolders = subFolders.stream()
+            .sorted(Comparator.comparing(FolderEntity::getTime).reversed())
+            .map(sub -> new FolderDTO(sub.getEntityId(), sub.getFolderName(), sub.getTime(), sub.getCreatedBy()))
+            .collect(Collectors.toList());
+
+    FolderWithFilesDTO dto = new FolderWithFilesDTO(
+            folder.getEntityId(),
+            folder.getFolderName(),
+            folder.getTime(),
+            folder.getCreatedBy(),
+            sortedFiles,
+            sortedSubFolders
+    );
+
+    return ResponseEntity.ok(dto);
+}
+
 
     public ResponseEntity<Map<String, Object>> handleLargeFile(MultipartFile[] files, int folderId, JsonNode user) {
         Map<String, Object> map = new HashMap<String, Object>();
@@ -176,23 +264,6 @@ public class FolderService {
         return ResponseEntity.ok(map);
     }
 
-//	public ResponseEntity<Map<String, Object>> getAllFavorites() {
-//		Map<String, Object> map = new HashMap<String, Object>();
-//		List<FavoriteFolders> favorites = favoriteFolderRepository.findAll();
-//		List<Object> fav = new ArrayList<Object>();
-//		for (FavoriteFolders f : favorites) {
-//			if (f.getType().equals(("folder"))) {
-//				FolderDTO folder = folderRepository.findFolderById(f.getEntityId());
-//				fav.add(folder);
-//			} else if (f.getType().equals("file")) {
-//				FileEntity file = fileRepository.findById(f.getEntityId()).get();
-//				fav.add(file);
-//			}
-//		}
-//		map.put("data", fav);
-//		return ResponseEntity.ok(map);
-//	}
-
     public ResponseEntity<Map<String, Object>> getAllFavorites() {
         Map<String, Object> response = new HashMap<>();
 
@@ -238,7 +309,7 @@ public class FolderService {
 
     public ResponseEntity<Map<String, Object>> getAccountsDashboard(JsonNode res, int pageNo, int pageSize) {
         // First verify if the user is from accounts team and has valid 2FA
-        ResponseEntity<Map<String, Object>> securityCheck = accountSecurityService.verifyAccountTeamAccess(res);
+        ResponseEntity<Map<String, Object>> securityCheck = accountSecurityService.verifyDepartmentAccess(res, List.of(Department.FINANCE_AND_ACCOUNTS));
         if (securityCheck.getStatusCode() != HttpStatus.OK) {
             return securityCheck;
         }
@@ -303,5 +374,12 @@ public class FolderService {
         return ResponseEntity.ok(map);
     }
 
-
+    public  Map<String, Object> search(String searchText) {
+        List<FileDTO> files = fileRepository.searchFiles(searchText);
+        List<FolderDTO> folders = folderRepository.searchFolders(searchText);
+        Map<String, Object> map=new HashMap<>();
+        map.put("folders",folders);
+        map.put("files",files);
+        return map;
+    }
 }

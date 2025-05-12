@@ -1,9 +1,7 @@
 package com.qp.dataCentralize.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qp.dataCentralize.entity.FavoriteFolders;
-import com.qp.dataCentralize.entity.FileEntity;
 import com.qp.dataCentralize.helper.FileUploader;
 import com.qp.dataCentralize.repository.FileRepository;
 import com.qp.dataCentralize.service.FolderService;
@@ -46,6 +44,20 @@ public class FolderColntroller {
             return ResponseEntity.badRequest().body(map);
         }
         return folderService.saveFolder(folderName, user);
+    }
+
+    @PostMapping("/create/subfolder/{folderName}")
+    public ResponseEntity<Map<String, Object>> createSubFolder(@PathVariable String folderName, @RequestParam int rootFolderId,
+                                                               @RequestHeader("Authorization") String token) {
+        Map<String, Object> map = new HashMap<String, Object>();
+        JsonNode user = userService.validateToken(token);
+        if (user == null) {
+            map.put("message", "Invalid Token or User Not found");
+            map.put("code", 400);
+            map.put("status", "fail");
+            return ResponseEntity.badRequest().body(map);
+        }
+        return folderService.createSubFolder(folderName, user, rootFolderId);
     }
 
     @PostMapping("/file/isExists")
@@ -189,7 +201,7 @@ public class FolderColntroller {
             map.put("status", "fail");
             return ResponseEntity.badRequest().body(map);
         }
-        return folderService.replaceFile(folderId, user, files,replaceFiles);
+        return folderService.replaceFile(folderId, user, files, replaceFiles);
     }
 
     @PostMapping("/rename/folder")
@@ -217,4 +229,13 @@ public class FolderColntroller {
         }
         return folderService.renameFile(fileId, filename);
     }
+
+    @GetMapping("/search/inFolders")
+    public ResponseEntity<?> searchFolders(@RequestParam("searchText") String searchText) {
+        System.out.println(searchText);
+        Map<String, Object> results = folderService.search(searchText);
+        return ResponseEntity.ok(results);
+    }
 }
+
+
