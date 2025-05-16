@@ -2,19 +2,21 @@ package com.qp.dataCentralize.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.qp.dataCentralize.entity.FavoriteFolders;
+import com.qp.dataCentralize.entity.FileEntity;
+import com.qp.dataCentralize.entity.FolderEntity;
 import com.qp.dataCentralize.helper.FileUploader;
 import com.qp.dataCentralize.repository.FileRepository;
 import com.qp.dataCentralize.service.FolderService;
 import com.qp.dataCentralize.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDate;
+import java.util.*;
 
 @RestController
 @RequestMapping("/planotech-inhouse")
@@ -120,12 +122,14 @@ public class FolderColntroller {
     public Object getAllFiles(@RequestParam int folderId, @RequestHeader("Authorization") String token) {
         Map<String, Object> map = new HashMap<String, Object>();
         JsonNode user = userService.validateToken(token);
+        System.out.println(folderId);
         if (user == null) {
             map.put("message", "Invalid Token or User Not found");
             map.put("code", 400);
             map.put("status", "fail");
             return ResponseEntity.badRequest().body(map);
         }
+        System.out.println("controller");
         return folderService.getAllFile(folderId);
     }
 
@@ -236,6 +240,15 @@ public class FolderColntroller {
         Map<String, Object> results = folderService.search(searchText);
         return ResponseEntity.ok(results);
     }
+
+    @PostMapping("/test")
+    public ResponseEntity<?> test(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        System.out.println(date);
+        fileUploader.cleanFilesByDate(date);
+        return null;
+    }
+
+
 }
 
 

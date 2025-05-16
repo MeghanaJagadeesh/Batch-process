@@ -15,6 +15,9 @@ import java.util.Optional;
 @Repository
 public interface FolderRepository extends JpaRepository<FolderEntity, Integer> {
 
+    @Query("SELECT f FROM FolderEntity f JOIN f.files file WHERE file.id = :fileId")
+    Optional<FolderEntity> findFolderByFileId(@Param("fileId") int fileId);
+
     Optional<FolderEntity> findByFolderNameAndParent(String folderName, FolderEntity parent);
 
     @Query("SELECT COUNT(f) > 0 FROM FolderEntity f WHERE f.folderName = :folderName AND f.createdBy LIKE %:searchPattern% AND f.parent IS NULL")

@@ -21,23 +21,21 @@ import java.util.concurrent.Executors;
 @Service
 public class UploadLargeFile {
 
-    @Value("${server.sftp_port}")
-    int SFTP_PORT;
+//    local
+//    public static final int SFTP_PORT = 22;
+//    public static final String SFTP_USER = "dh_nw536f";
+//    public static final String SFTP_PASSWORD = "Srikrishna@0700";
+//    public static final String SFTP_HOST = "pdx1-shared-a2-03.dreamhost.com";
+//    public static final String SFTP_DIRECTORY = "/home/dh_nw536f/aws.quantumparadigm.in/documents/";
+//    public static final String BASE_URL = "https://aws.quantumparadigm.in/documents/";
 
-    @Value("${server.sftp_user}")
-    String SFTP_USER;
-
-    @Value("${server.sftp_password}")
-    String SFTP_PASSWORD;
-
-    @Value("${server.sftp_host}")
-    String SFTP_HOST;
-
-    @Value("${server.sftp_directory}")
-    String SFTP_DIRECTORY;
-
-    @Value("${server.baseurl}")
-    String BASE_URL;
+    //    global
+    public static final int SFTP_PORT = 22;
+    public static final String SFTP_USER = "dh_gmj3vr";
+    public static final String SFTP_PASSWORD = "Srikrishna@0700";
+    public static final String SFTP_HOST = "pdx1-shared-a2-03.dreamhost.com";
+    public static final String SFTP_DIRECTORY = "/home/dh_gmj3vr/mantramatrix.in/documents/";
+    public static final String BASE_URL = "https://mantramatrix.in/documents/";
 
     private static final int BUFFER_SIZE = 10 * 1024 * 1024;
     private final ExecutorService executorService = Executors.newFixedThreadPool(8);
@@ -76,8 +74,8 @@ public class UploadLargeFile {
         return filelist;
     }
 
-    private String uploadFileViaSFTP(InputStream inputStream, String fileName,long totalSize) {
-       JSch jsch = new JSch();
+    private String uploadFileViaSFTP(InputStream inputStream, String fileName, long totalSize) {
+        JSch jsch = new JSch();
         Session session = null;
         ChannelSftp sftpChannel = null;
 
@@ -114,6 +112,6 @@ public class UploadLargeFile {
     }
 
     private String generateUniqueFileName(String originalFilename) {
-        return originalFilename+UUID.randomUUID() ;
+        return UUID.randomUUID().toString().replace("-", "").substring(0, 6)+"_"+ originalFilename ;
     }
 }

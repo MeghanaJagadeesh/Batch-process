@@ -7,6 +7,7 @@ public class FolderDTO {
     private String folderName;
     private Instant time;
     private String createdBy;
+    private String location;
 
     public FolderDTO(int entityId, String folderName, Instant time, String createdBy) {
         this.entityId = entityId;
@@ -19,4 +20,5 @@ public class FolderDTO {
     public String getFolderName() { return folderName; }
     public Instant getTime() { return time; }
     public String getCreatedBy() { return createdBy; }
+    public String getLocation() { return location; }
 }

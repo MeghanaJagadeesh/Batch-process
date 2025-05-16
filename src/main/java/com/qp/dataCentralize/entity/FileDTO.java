@@ -14,6 +14,7 @@ public class FileDTO {
     private String fileSize;
     private Instant time;
     private String createdBy;
+    private String location;
 
     public FileDTO(int id, String type, String fileName, String fileLink, String fileSize, Instant time, String createdBy) {
         this.id = id;
@@ -24,5 +25,4 @@ public class FileDTO {
         this.time = time;
         this.createdBy = createdBy;
     }
-
 }

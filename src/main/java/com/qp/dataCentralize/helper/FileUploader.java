@@ -19,6 +19,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -36,23 +38,21 @@ public class FileUploader {
     @Autowired
     FavoriteFolderRepository favoriteFolderRepository;
 
-    @Value("${server.sftp_port}")
-    int SFTP_PORT;
+    //    local
+//    public static final int SFTP_PORT = 22;
+//    public static final String SFTP_USER = "dh_nw536f";
+//    public static final String SFTP_PASSWORD = "Srikrishna@0700";
+//    public static final String SFTP_HOST = "pdx1-shared-a2-03.dreamhost.com";
+//    public static final String SFTP_DIRECTORY = "/home/dh_nw536f/aws.quantumparadigm.in/documents/";
+//    public static final String BASE_URL = "https://aws.quantumparadigm.in/documents/";
 
-    @Value("${server.sftp_user}")
-    String SFTP_USER;
-
-    @Value("${server.sftp_password}")
-    String SFTP_PASSWORD;
-
-    @Value("${server.sftp_host}")
-    String SFTP_HOST;
-
-    @Value("${server.sftp_directory}")
-    String SFTP_DIRECTORY;
-
-    @Value("${server.baseurl}")
-    String BASE_URL;
+    //    global
+    public static final int SFTP_PORT = 22;
+    public static final String SFTP_USER = "dh_gmj3vr";
+    public static final String SFTP_PASSWORD = "Srikrishna@0700";
+    public static final String SFTP_HOST = "pdx1-shared-a2-03.dreamhost.com";
+    public static final String SFTP_DIRECTORY = "/home/dh_gmj3vr/mantramatrix.in/documents/";
+    public static final String BASE_URL = "https://mantramatrix.in/documents/";
 
     private final ExecutorService executorService = Executors.newFixedThreadPool(10);
 
@@ -134,7 +134,7 @@ public class FileUploader {
     }
 
     private String generateUniqueFileName(String originalFilename) {
-        return originalFilename + UUID.randomUUID().toString();
+        return UUID.randomUUID().toString().replace("-", "").substring(0, 6)+"_"+originalFilename ;
     }
 
     public ResponseEntity<Map<String, Object>> deleteFile(int folderId, FileEntity fileEntity) {
@@ -243,4 +243,108 @@ public class FileUploader {
             }
         }
     }
+
+    private static final List<String> VALID_EXTENSIONS = Arrays.asList(
+            ".pdf", ".xls", ".xlsx", ".doc", ".docx", ".png", ".jpg", ".jpeg", ".svg", ".cdr",
+            ".fbx", ".ai", ".psd", ".eps", ".tiff", ".gif", ".mp4", ".mov", ".mp3", ".wav",
+            ".zip", ".rar", ".7z", ".proj", ".pr", ".ppt", ".pptx"
+    );
+
+    public void cleanFilesByDate(LocalDate targetDate) {
+        Instant startOfDay = targetDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
+        Instant endOfDay = targetDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
+
+        List<FileEntity> files = fileRepository.findAllByTimeBetween(startOfDay, endOfDay);
+
+        for (FileEntity file : files) {
+            String cleanedName = clean(file.getFileName());
+            String cleanedLink = clean(file.getFileLink());
+
+            if (cleanedName != null && cleanedLink != null) {
+                file.setFileName(cleanedName);
+                file.setFileLink(cleanedLink);
+                fileRepository.save(file);
+            }
+//            } else {
+//                // Optionally: remove junk files
+//                fileRepository.delete(file);
+//            }
+        }
+    }
+
+    private String clean(String input) {
+        if (input == null) return null;
+
+        for (String ext : VALID_EXTENSIONS) {
+            int index = input.toLowerCase().indexOf(ext);
+            if (index != -1) {
+                return input.substring(0, index + ext.length());
+            }
+        }
+        return null;
+    }
+
+    public void renameInvalidFilesByDate(String targetDate) {
+        JSch jsch = new JSch();
+        Session session = null;
+        ChannelSftp sftpChannel = null;
+
+        try {
+            session = jsch.getSession(SFTP_USER, SFTP_HOST, SFTP_PORT);
+            session.setPassword(SFTP_PASSWORD);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect();
+
+            sftpChannel = (ChannelSftp) session.openChannel("sftp");
+            sftpChannel.connect();
+
+            Vector<ChannelSftp.LsEntry> files = sftpChannel.ls(SFTP_DIRECTORY);
+
+            for (ChannelSftp.LsEntry entry : files) {
+                String fileName = entry.getFilename();
+                SftpATTRS attrs = entry.getAttrs();
+
+                // Filter directories and system files
+                if (attrs.isDir() || fileName.startsWith(".")) continue;
+
+                // Convert file modified time to LocalDate
+                Instant fileTime = Instant.ofEpochSecond(attrs.getMTime());
+                LocalDate fileDate = fileTime.atZone(ZoneId.systemDefault()).toLocalDate();
+
+                if (!fileDate.toString().equals(targetDate)) continue;
+
+                // Check if filename already ends correctly
+                Optional<String> validExtension = VALID_EXTENSIONS.stream()
+                        .filter(ext -> fileName.toLowerCase().contains(ext))
+                        .findFirst();
+
+                if (validExtension.isPresent()) {
+                    String ext = validExtension.get();
+                    int extIndex = fileName.toLowerCase().indexOf(ext);
+                    int correctEndIndex = extIndex + ext.length();
+
+                    // If the file has extra text after extension
+                    if (correctEndIndex < fileName.length()) {
+                        String cleanedFileName = fileName.substring(0, correctEndIndex);
+                        String oldPath = SFTP_DIRECTORY + fileName;
+                        String newPath = SFTP_DIRECTORY + cleanedFileName;
+
+                        System.out.println("Renaming: " + fileName + " ➤ " + cleanedFileName);
+                        sftpChannel.rename(oldPath, newPath);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (sftpChannel != null && sftpChannel.isConnected()) {
+                sftpChannel.disconnect();
+            }
+            if (session != null && session.isConnected()) {
+                session.disconnect();
+            }
+        }
+    }
+
+
 }

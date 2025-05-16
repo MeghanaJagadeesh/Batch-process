@@ -143,34 +143,37 @@ public class FolderService {
 //    }
 
 public ResponseEntity<?> getAllFile(int folderId) {
-    FolderEntity folder = folderRepository.findFolderWithFiles(folderId); // files fetched
-    if (folder == null) {
-        return ResponseEntity.notFound().build();
+    try {
+        FolderEntity folder = folderRepository.findFolderWithFiles(folderId); // files fetched
+        if (folder == null) {
+            return ResponseEntity.notFound().build();
+        }
+        System.out.println("service");
+        List<FolderEntity> subFolders = folderRepository.findSubFolders(folderId); // subfolders fetched separately
+
+        List<FileEntity> sortedFiles = folder.getFiles().stream()
+                .sorted(Comparator.comparing(FileEntity::getTime).reversed())
+                .collect(Collectors.toList());
+
+        List<FolderDTO> sortedSubFolders = subFolders.stream()
+                .sorted(Comparator.comparing(FolderEntity::getTime).reversed())
+                .map(sub -> new FolderDTO(sub.getEntityId(), sub.getFolderName(), sub.getTime(), sub.getCreatedBy()))
+                .collect(Collectors.toList());
+
+        FolderWithFilesDTO dto = new FolderWithFilesDTO(
+                folder.getEntityId(),
+                folder.getFolderName(),
+                folder.getTime(),
+                folder.getCreatedBy(),
+                sortedFiles,
+                sortedSubFolders
+        );
+        System.out.println(dto);
+        return ResponseEntity.ok(dto);
+    }catch (Exception e){
+        e.printStackTrace();
+        return  null;
     }
-
-    List<FolderEntity> subFolders = folderRepository.findSubFolders(folderId); // subfolders fetched separately
-
-    // Sort files by time descending
-    List<FileEntity> sortedFiles = folder.getFiles().stream()
-            .sorted(Comparator.comparing(FileEntity::getTime).reversed())
-            .collect(Collectors.toList());
-
-    // Sort subfolders by time descending and convert to DTO
-    List<FolderDTO> sortedSubFolders = subFolders.stream()
-            .sorted(Comparator.comparing(FolderEntity::getTime).reversed())
-            .map(sub -> new FolderDTO(sub.getEntityId(), sub.getFolderName(), sub.getTime(), sub.getCreatedBy()))
-            .collect(Collectors.toList());
-
-    FolderWithFilesDTO dto = new FolderWithFilesDTO(
-            folder.getEntityId(),
-            folder.getFolderName(),
-            folder.getTime(),
-            folder.getCreatedBy(),
-            sortedFiles,
-            sortedSubFolders
-    );
-
-    return ResponseEntity.ok(dto);
 }
 
 
@@ -374,12 +377,59 @@ public ResponseEntity<?> getAllFile(int folderId) {
         return ResponseEntity.ok(map);
     }
 
-    public  Map<String, Object> search(String searchText) {
+//    public  Map<String, Object> search(String searchText) {
+//        List<FileDTO> files = fileRepository.searchFiles(searchText);
+//        List<FolderDTO> folders = folderRepository.searchFolders(searchText);
+//        Map<String, Object> map=new HashMap<>();
+//        map.put("folders",folders);
+//        map.put("files",files);
+//        return map;
+//    }
+
+    public Map<String, Object> search(String searchText) {
         List<FileDTO> files = fileRepository.searchFiles(searchText);
         List<FolderDTO> folders = folderRepository.searchFolders(searchText);
-        Map<String, Object> map=new HashMap<>();
-        map.put("folders",folders);
-        map.put("files",files);
-        return map;
+
+        // Group files by department
+        Map<String, List<FileDTO>> filesGroupedByDepartment = files.stream()
+                .collect(Collectors.groupingBy(file -> extractDepartment(file.getCreatedBy())));
+
+        // Group folders by department
+        Map<String, List<FolderDTO>> foldersGroupedByDepartment = folders.stream()
+                .collect(Collectors.groupingBy(folder -> extractDepartment(folder.getCreatedBy())));
+
+        // Prepare final response
+        Map<String, Object> result = new HashMap<>();
+        result.put("files", filesGroupedByDepartment);
+        result.put("folders", foldersGroupedByDepartment);
+
+        return result;
+    }
+
+    private String extractDepartment(String createdBy) {
+        if (createdBy != null && createdBy.contains("(") && createdBy.contains(")")) {
+            int start = createdBy.indexOf('(') + 1;
+            int end = createdBy.indexOf(')');
+            return createdBy.substring(start, end).trim();
+        }
+        return "Unknown";
+    }
+
+
+    public List<String> getParentFoldersForFile(String fileName) {
+        FileEntity file = fileRepository.findByFileName(fileName);
+        if (file == null) return List.of();
+        FolderEntity folder = folderRepository.findFolderByFileId(file.getId()).orElse(null);
+        System.out.println(folder.getFolderName());
+        List<String> path = new ArrayList<>();
+        while (folder != null) {
+            path.add(folder.getFolderName());
+            folder = folder.getParent() != null
+                    ? folderRepository.findById(folder.getParent().getEntityId()).orElse(null)
+                    : null;
+        }
+
+        Collections.reverse(path);
+        return path;
     }
 }

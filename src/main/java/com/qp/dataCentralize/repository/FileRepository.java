@@ -7,15 +7,21 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface FileRepository extends JpaRepository<FileEntity, Integer> {
 
+    List<FileEntity> findAllByTimeBetween(Instant start, Instant end);
+
     @Query("SELECT new com.qp.dataCentralize.entity.FileDTO(f.id, f.type, f.fileName, f.fileLink, f.fileSize, f.time, f.createdBy) " +
             "FROM FileEntity f WHERE LOWER(f.fileName) LIKE LOWER(CONCAT('%', :searchText, '%'))")
     List<FileDTO> searchFiles(@Param("searchText") String searchText);
+
+    FileEntity findByFileName(String filename);
 
     @Query("SELECT f FROM FolderEntity fe JOIN fe.files f WHERE fe.entityId = :folderId AND f.fileName = :fileName")
     Optional<FileEntity> findFileInFolderByFileName(@Param("folderId") int folderId, @Param("fileName") String fileName);
